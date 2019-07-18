@@ -1,0 +1,182 @@
+REPORT zb0964_test4.
+
+CLASS main DEFINITION.
+
+  PUBLIC SECTION.
+    TYPES : ty_outfile TYPE TABLE OF t100,
+            tr_langu   TYPE RANGE OF sy-langu.
+
+    CLASS-DATA : gt_outfile TYPE ty_outfile,
+                 gi_err     TYPE REF TO /man/cx_co_error,
+                 gv_dummy   TYPE string.
+
+    CLASS-METHODS start IMPORTING text     TYPE string
+                                  language TYPE tr_langu.
+
+
+  PROTECTED SECTION.
+
+    CLASS-METHODS get_main_data IMPORTING text     TYPE string
+                                          language TYPE tr_langu
+                                CHANGING  table    TYPE ty_outfile
+                                RAISING   /man/cx_co_error.
+
+    CLASS-METHODS check_data_and_work CHANGING table TYPE ty_outfile
+                                      RAISING  /man/cx_co_error.
+
+    CLASS-METHODS show_data CHANGING table TYPE ty_outfile.
+
+  PRIVATE SECTION.
+
+    CLASS-METHODS sap_gui_progress
+      IMPORTING perc TYPE i
+                text TYPE string.
+
+    CLASS-METHODS  error
+      IMPORTING
+                rc TYPE /man/sstring DEFAULT 'ERROR'
+                id TYPE symsgid DEFAULT '/MAN/CO_TOOLS'
+                no TYPE symsgno
+                v1 TYPE clike OPTIONAL
+                v2 TYPE clike OPTIONAL
+                v3 TYPE clike OPTIONAL
+                v4 TYPE clike OPTIONAL
+      RAISING   /man/cx_co_error.
+
+ENDCLASS.
+
+CLASS main IMPLEMENTATION.
+
+  METHOD start.
+
+    TRY.
+        get_main_data( EXPORTING text = text
+                                 language = language
+                       CHANGING table = gt_outfile ).
+
+      CATCH /man/cx_co_error INTO gi_err.
+        gi_err->message( ).
+    ENDTRY.
+
+    TRY.
+        check_data_and_work( CHANGING table = gt_outfile ).
+      CATCH /man/cx_co_error INTO gi_err.
+        gi_err->message( ).
+    ENDTRY.
+
+    show_data( CHANGING table = gt_outfile ).
+
+  ENDMETHOD.
+
+  METHOD get_main_data.
+    DATA : lr_text TYPE RANGE OF string,
+           ls_text LIKE LINE OF lr_text,
+           lv_perc TYPE i,
+           lv_text TYPE string.
+
+    lv_perc = 20.
+    lv_text = 'get_main_data'.
+    sap_gui_progress( EXPORTING perc = lv_perc
+                                text = lv_text ).
+
+    MOVE : 'I' TO ls_text-sign,
+           'CP' TO ls_text-option,
+           text TO ls_text-low,
+           space TO ls_text-high.
+    APPEND ls_text TO lr_text.
+
+    SELECT *
+           FROM t100
+           WHERE sprsl IN @language
+           AND   text  IN @lr_text
+           INTO TABLE @gt_outfile.
+
+    IF sy-subrc <> 0.
+      MESSAGE e208(00) WITH 'Keine Treffer gefunden!' INTO gv_dummy.
+      error( id = sy-msgid no = sy-msgno
+             v1 = sy-msgv1 v2 = sy-msgv2
+             v3 = sy-msgv3 v4 = sy-msgv4 ).
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD check_data_and_work.
+    DATA : ls_outfile LIKE LINE OF gt_outfile,
+           lv_perc    TYPE i,
+           lv_text    TYPE string.
+
+    lv_perc = 50.
+    lv_text = 'check_data_and_work'.
+    sap_gui_progress( EXPORTING perc = lv_perc
+                                text = lv_text ).
+
+    LOOP AT gt_outfile INTO ls_outfile.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD show_data.
+    "follow the white rabbit ...
+
+    DATA : alv        TYPE REF TO /man/cl_co_alvtool.
+
+    CREATE OBJECT alv EXPORTING table = gt_outfile.
+
+    alv->show( CHANGING table = gt_outfile ).
+
+  ENDMETHOD.
+
+  METHOD sap_gui_progress.
+
+    CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+      EXPORTING
+        percentage = perc
+        text       = text.
+
+  ENDMETHOD.
+
+  METHOD error.
+    DATA: msgv1 TYPE symsgv,
+          msgv2 TYPE symsgv,
+          msgv3 TYPE symsgv,
+          msgv4 TYPE symsgv.
+
+    WRITE v1 TO msgv1.
+    WRITE v2 TO msgv2.
+    WRITE v3 TO msgv3.
+    WRITE v4 TO msgv4.
+
+    RAISE EXCEPTION TYPE /man/cx_co_error
+      EXPORTING
+        rc         = rc
+        t100_msgid = id
+        t100_msgno = no
+        t100_msgv1 = msgv1
+        t100_msgv2 = msgv2
+        t100_msgv3 = msgv3
+        t100_msgv4 = msgv4.
+  ENDMETHOD.
+
+ENDCLASS.
+
+SELECTION-SCREEN BEGIN OF BLOCK b01 WITH FRAME TITLE TEXT-b01.
+SELECT-OPTIONS : so_lang FOR sy-langu DEFAULT sy-langu.
+PARAMETERS : pa_text TYPE string LOWER CASE.
+SELECTION-SCREEN END OF BLOCK b01.
+
+SELECTION-SCREEN BEGIN OF BLOCK b06 WITH FRAME TITLE TEXT-b06.
+PARAMETERS: pa_var TYPE slis_vari.
+SELECTION-SCREEN END OF BLOCK b06.
+
+INITIALIZATION.
+
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR pa_var.
+
+  /man/cl_co_alvtool=>f4_variant_static( exporting save = 'A'
+                                         changing variant = pa_var ).
+
+START-OF-SELECTION.
+
+  main=>start( EXPORTING text = pa_text
+                         language = so_lang[] ).
