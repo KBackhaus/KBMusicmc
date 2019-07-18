@@ -1,0 +1,272 @@
+REPORT zb0964_test1.
+
+CLASS cx_overflow DEFINITION INHERITING FROM cx_static_check.
+ENDCLASS.
+
+DATA : datum TYPE sy-datum,
+       zeit  TYPE sy-uzeit,
+       tms   TYPE vlc_ltstamp.
+
+DATA(id) = `SABAPDEMOS`.
+
+DATA(date) = sy-datum.
+
+DATA(sjahr) = /man/cl_co_date=>schaltjahr( jahr = '2016' ).
+
+DATA(mode) = cl_demo_output=>html_mode.
+
+DATA(system) = syst.
+
+DATA(erster)  = /man/cl_co_date=>monatserster( datum = system-datum ).
+
+DATA(letzter) = /man/cl_co_date=>monatsletzter( datum = system-datum ).
+
+DATA(result)  = /man/cl_co_date=>add( datum = system-datum tage = 2
+                                      monate = 4 jahre = 1 ).
+
+DATA : sy_uzeit22 TYPE sy-uzeit VALUE '220000',
+       sy_uzeit12 TYPE sy-uzeit VALUE '120000'.
+
+PARAMETERS : pa_name TYPE string.
+
+START-OF-SELECTION.
+
+  BREAK-POINT.
+
+  PERFORM range_dref.
+
+  BREAK-POINT.
+
+FORM range_dref.
+
+  TYPES : range_bukrs TYPE RANGE OF bukrs.
+
+  DATA(range_ref) = NEW range_bukrs( ( sign = 'I'
+                          option = 'EQ'
+                          low = '0120' )
+
+                        ( sign = 'I'
+                          option = 'EQ'
+                          low = '0220' ) ).
+
+  SELECT * FROM t001
+           INTO TABLE @DATA(r_t001)
+           WHERE bukrs IN @range_ref->*
+           ORDER BY PRIMARY KEY.
+
+  TRY.
+      CALL METHOD cl_salv_table=>factory
+        EXPORTING
+          list_display = abap_true
+        IMPORTING
+          r_salv_table = DATA(gr_alv_outtab)
+        CHANGING
+          t_table      = r_t001.
+
+      DATA(lo_columns) = gr_alv_outtab->get_columns( ).
+      lo_columns->set_optimize( abap_true ).
+
+      gr_alv_outtab->display( ).
+    CATCH cx_salv_msg INTO DATA(lx_salv_msg).
+      DATA(ls_msg_alv) = lx_salv_msg->if_alv_message~get_message( ).
+      IF ls_msg_alv-msgid IS NOT INITIAL AND
+         ls_msg_alv-msgno IS NOT INITIAL.
+        MESSAGE ID ls_msg_alv-msgid TYPE 'E' NUMBER ls_msg_alv-msgno
+                WITH ls_msg_alv-msgv1 ls_msg_alv-msgv2 ls_msg_alv-msgv3 ls_msg_alv-msgv4.
+      ENDIF.
+  ENDTRY.
+
+ENDFORM.
+
+FORM user_encrypt.
+
+  DATA lv_user   TYPE string.
+  DATA lv_xuser_url TYPE xstring.
+  DATA lv_user_web TYPE string.
+
+  lv_user = pa_name.
+
+  CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
+    EXPORTING
+      text   = lv_user
+    IMPORTING
+      buffer = lv_xuser_url
+    EXCEPTIONS
+      failed = 1
+      OTHERS = 2.
+  IF sy-subrc <> 0.
+    RETURN. "from Method
+  ENDIF.
+
+  CALL FUNCTION 'HR_KR_XSTRING_TO_STRING'
+    EXPORTING
+*     FROM_CODEPAGE       = '8500'
+      in_xstring = lv_xuser_url
+*     OUT_LEN    =
+    IMPORTING
+      out_string = lv_user_web.
+
+ENDFORM.
+
+FORM auth_check.
+  DATA: lx_auth_check TYPE REF TO cx_root.
+  DATA: l_auth_check_text TYPE string.
+
+  TRY.
+      CALL TRANSACTION 'SCOT' WITH AUTHORITY-CHECK.
+
+    CATCH cx_sy_authorization_error INTO lx_auth_check.
+*     Authorization missing for user when executing transaction
+      l_auth_check_text = lx_auth_check->get_text( ).
+      sy-subrc = 99.
+  ENDTRY.
+ENDFORM.
+
+
+FORM concatenate.
+  DATA: ls_e1edkzus01 TYPE /man/e1edkzus01,
+        ls_edidd      TYPE edidd.
+
+  ls_edidd-segnam = '/MAN/E1EDKZUS01'.
+
+  ls_e1edkzus01-pdfid = 'CBS-IT'.
+
+  ls_e1edkzus01-pdfid = |CBS-IT|.
+
+  MOVE 'CBS-IT' TO ls_e1edkzus01-pdfid.
+
+  DATA(result_uname) = |Hello { sy-uname }!|
+                       && | Es ist jetzt { sy-uzeit } Uhr|
+                       && | und ich freue mich sehr sie hier bei uns im System begrüssen zu dürfen!|
+                       && | alles weiteren Infos zur { ls_e1edkzus01-pdfid } finden sie hier!|.
+
+  WRITE : result_uname.
+ENDFORM.
+
+FORM inner_join.
+  DATA : lv_ernam TYPE ernam_rf VALUE 'SAP'.
+
+  SELECT a~bukrs,
+         a~saknr,
+         b~butxt,
+         b~ort01
+  FROM skb1 AS a
+  INNER JOIN t001 AS b
+  ON a~bukrs = b~bukrs AND
+     a~ernam = @lv_ernam
+  INTO TABLE @DATA(lt_itab)
+  ORDER BY a~bukrs, a~saknr.
+
+  LOOP AT lt_itab INTO DATA(wa).
+
+    WRITE :/ wa-bukrs, wa-saknr, wa-butxt.
+
+  ENDLOOP.
+ENDFORM.
+
+FORM get_t001.
+* lokal inline dekleration ls_t001 und lt_t001 nur in FORM sichtbar!
+  SELECT SINGLE * FROM t001
+    INTO @DATA(ls_t001).
+
+  SELECT * FROM t001
+    INTO TABLE @DATA(lt_t001)
+    ORDER BY PRIMARY KEY.
+
+  TRY.
+      CALL METHOD cl_salv_table=>factory
+        EXPORTING
+          list_display = abap_false
+        IMPORTING
+          r_salv_table = DATA(gr_alv_outtab)
+        CHANGING
+          t_table      = lt_t001.
+
+      DATA(lo_columns) = gr_alv_outtab->get_columns( ).
+      lo_columns->set_optimize( abap_true ).
+
+      gr_alv_outtab->display( ).
+    CATCH cx_salv_msg INTO DATA(lx_salv_msg).
+      DATA(ls_msg_alv) = lx_salv_msg->if_alv_message~get_message( ).
+      IF ls_msg_alv-msgid IS NOT INITIAL AND
+         ls_msg_alv-msgno IS NOT INITIAL.
+        MESSAGE ID ls_msg_alv-msgid TYPE 'E' NUMBER ls_msg_alv-msgno
+                WITH ls_msg_alv-msgv1 ls_msg_alv-msgv2 ls_msg_alv-msgv3 ls_msg_alv-msgv4.
+      ENDIF.
+  ENDTRY.
+
+ENDFORM.
+
+FORM switch.
+
+  DATA(out) = cl_demo_output=>new( mode = cl_demo_output=>text_mode ). "Es geht auch HTML ist default ...
+  DATA(out2) = cl_demo_output=>new( mode = mode ).
+
+  DO.
+    TRY.
+        out->write(
+          SWITCH string( sy-index
+                         WHEN 1 THEN 'one'
+                         WHEN 2 THEN 'two'
+                         WHEN 3 THEN 'three'
+                         ELSE THROW cx_overflow( ) ) ).
+      CATCH cx_overflow.
+        out->display( ).
+        EXIT.
+    ENDTRY.
+  ENDDO.
+
+  DATA tstring TYPE string.
+  DATA ls_t001 TYPE t001.
+  DATA lt_t001 TYPE TABLE OF t001.
+
+  lt_t001 =
+      VALUE #(
+      ( mandt = '002' bukrs = '9000' butxt = 'Buchungskreis 9000' ort01 = 'Feuerland' land1 = 'DE' )
+      ( mandt = '002' bukrs = '9001' butxt = 'Buchungskreis 9001' ort01 = 'Lummerlandland' land1 = 'DE' )
+              ).
+  tstring = 'Übergabe via WRITE_TEXT'.
+
+  out2->write_text( text = tstring ).
+
+  TRY.
+      SELECT * FROM t001 INTO ls_t001
+               ORDER BY PRIMARY KEY.
+        CONCATENATE ls_t001-butxt
+                    ls_t001-ort01
+                    ls_t001-land1
+                    INTO tstring SEPARATED BY space.
+        out2->write_text( text = tstring ).
+        APPEND ls_t001 TO lt_t001.
+      ENDSELECT.
+
+      tstring = 'Übergabe via WRITE_DATA'.
+
+      out2->write_text( text = tstring ).
+
+      out2->write_data( value = lt_t001
+                        name = 'Buchungskreise' ).
+      out2->display( ).
+  ENDTRY.
+ENDFORM.
+
+FORM timestemp.
+  DATA(out3) = cl_demo_output=>new( mode = cl_demo_output=>html_mode ).
+  DATA tstring TYPE string.
+
+  datum = '20180101'.
+  zeit = '000001'.
+
+  CONVERT DATE datum
+          TIME zeit
+          INTO TIME STAMP tms TIME ZONE sy-zonlo.
+
+  MOVE tms TO tstring.
+  out3->write_text( text = tstring ).
+  out3->display( ).
+
+ENDFORM.
+
+FORM test_hana.
+  " CALL DATABASE PROCEDURE
+ENDFORM.
