@@ -12,7 +12,6 @@ CLASS main DEFINITION.
 
     CLASS-METHODS start IMPORTING text     TYPE string
                                   language TYPE tr_langu.
-*Laubi was here
 
   PROTECTED SECTION.
 
