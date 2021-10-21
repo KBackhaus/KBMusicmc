@@ -1,0 +1,68 @@
+<html>
+
+<head>
+<!-- Laden SAPUI5 Library und Core -->
+<script id="sap-ui-bootstrap"
+    type="text/javascript"
+    src="https://sapui5.hana.ondemand.com/resources/sap-ui-core.js"
+    data-sap-ui-theme="sap_blize"
+    data-sap-ui-libs="sap.m"></script>
+
+<!-- Neues Objekt vom Typ Button anlegen -->		 
+	<script>
+		var odump = new sap.m.Button("idButton",{
+		    text: "Klick Mich",
+			press: function(){
+			       alert("Na also geht doch!");
+				   }
+		});
+		odump.placeAt("spidy");
+	</script> 
+
+<!-- Neues Objekt vom Typ CheckBox anlegen -->		
+	<script>
+		var ocheck = new sap.m.CheckBox("idCBox",{
+		    text: "mach mal einen Hacken dran",
+			select: function(){
+			       alert("Du hast die Checkbox geklickt");
+				   }
+		});
+		ocheck.placeAt("box");
+	</script> 
+
+<!-- Neues Objekt vom Typ Image anlegen -->		
+	<script>
+		var oimg = new sap.m.Image("idImg",{
+		    src: "https://kbmusicmc.files.wordpress.com/2021/05/photo_2021-05-04_11-33-51.jpg?w=400",
+			press: function(){
+			       alert("Du hast das Bild geklickt");
+				   }
+		});
+		oimg.placeAt("img");
+	</script> 
+	
+</head>
+
+<body class="sapZiBody">
+   Hier soll ein Knopf erscheinen
+   <br><br>
+<!-- Container für Button = spidy --> 
+   <div id="spidy"></div> 
+   <br> 
+   Hier soll eine Checkbox erscheinen 
+   <br> 
+<!-- Container für CheckBox = box --> 
+   <div id="box"></div> 
+   <br>
+   Hier soll ein Bild angezeigt werden
+   <br><br>
+<!-- Container für Image = img --> 
+   <div id="img"></div> 
+   <br>
+   Demo von : https://www.youtube.com/watch?v=QUJUUfZ-7sA
+   <br>
+   Meht Infos : https://sapui5.hana.ondemand.com/#/api
+   <br>
+   
+</body>
+
